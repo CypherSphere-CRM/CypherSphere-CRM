@@ -22,15 +22,38 @@ export default async function handler(req,res) {
     try {token=await auth.verifyIdToken((req.headers.authorization||'').replace(/^Bearer /,''),true);}
     catch {return res.status(401).json({error:'Sign in again.'});}
     const action=req.body?.action;
-    if(!['status','subscribe','portal'].includes(action)) return res.status(400).end();
+    if(!['status','subscribe','portal','delete-account'].includes(action)) return res.status(400).end();
     const account=await auth.getUser(token.uid);
     const stripe=new Stripe(key);
     const db=getFirestore();
     const ref=db.collection('previewBilling').doc(token.uid);
+    if(action==='delete-account'){
+      if(token.uid==='zXrKfpgUoiMq3ySzf8f6a0S25Kv2') return res.status(403).json({error:'Owner account deletion is unavailable here.'});
+      if(Date.now()/1000-token.auth_time>300) return res.status(401).json({error:'Sign in again to confirm deletion.'});
+      const customer=await db.runTransaction(async tx=>{
+        const saved=(await tx.get(ref)).data()||{};
+        tx.set(ref,{deleting:true,writeUntil:Timestamp.fromMillis(0)},{merge:true});
+        return saved.customer;
+      });
+      if(customer){
+        const entry=await stripe.customers.retrieve(customer);
+        if(!entry.deleted){
+          if(entry.metadata.uid!==token.uid) throw Error('Customer ownership mismatch');
+          await stripe.customers.del(customer);
+        }
+      }
+      for(const collection of ['previewDrivers','drivers','driverDirectory']){
+        await db.recursiveDelete(db.collection(collection).doc(token.uid));
+      }
+      await ref.delete();
+      await auth.deleteUser(token.uid);
+      return res.status(200).json({deleted:true});
+    }
     const trialEnds=trialDeadline(account.metadata.creationTime);
     const origin='https://'+process.env.VERCEL_URL;
     const result=await db.runTransaction(async tx=>{
       const saved=(await tx.get(ref)).data()||{};
+      if(saved.deleting) throw Error('Account deletion in progress');
       let customer=saved.customer;
       if(!customer && action==='subscribe'){
         customer=(await stripe.customers.create({email:account.email,metadata:{uid:token.uid}},
