@@ -49,11 +49,11 @@ export default async function handler(req,res) {
       await auth.deleteUser(token.uid);
       return res.status(200).json({deleted:true});
     }
-    const trialEnds=trialDeadline(account.metadata.creationTime);
-    const origin='https://'+process.env.VERCEL_URL;
+    const origin='https://cypherspherecr-git-9a2cf9-cyphersphereconsulting-4390s-projects.vercel.app';
     const result=await db.runTransaction(async tx=>{
       const saved=(await tx.get(ref)).data()||{};
       if(saved.deleting) throw Error('Account deletion in progress');
+      const trialEnds = saved.testTrialExpired === true ? 0 : trialDeadline(account.metadata.creationTime);
       let customer=saved.customer;
       if(!customer && action==='subscribe'){
         customer=(await stripe.customers.create({email:account.email,metadata:{uid:token.uid}},
