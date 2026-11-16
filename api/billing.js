@@ -67,7 +67,6 @@ export default async function handler(req,res) {
         if(!customer) throw Error('missing customer');
         output.url=(await stripe.billingPortal.sessions.create({customer,return_url:origin})).url;
       }else if(action==='subscribe'){
-        if(Date.now()<trialEnds) return {...output,error:'Your free trial is still active.'};
         const p=await stripe.prices.retrieve(price);
         if(!p.livemode||!p.active||p.currency!=='usd'||p.unit_amount!==499||p.recurring?.interval!=='month'||p.recurring.interval_count!==1) throw Error('price');
         let session=saved.session && await stripe.checkout.sessions.retrieve(saved.session);
