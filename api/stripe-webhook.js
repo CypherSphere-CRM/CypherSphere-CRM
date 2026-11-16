@@ -32,7 +32,7 @@ export default async function handler(req,res){
       const doc=await tx.get(ref);
       if(doc.data()?.deleting || doc.data()?.customer!==customer) return;
       const {paidUntil}=await subscriptionAccess(stripe,customer,process.env.STRIPE_PRICE_ID);
-      tx.update(ref,{writeUntil:Timestamp.fromMillis(Math.max(paidUntil,trialDeadline(account.metadata.creationTime)))});
+      tx.update(ref,{writeUntil:Timestamp.fromMillis(Math.max(paidUntil,doc.data().testTrialExpired === true ? 0 : trialDeadline(account.metadata.creationTime)))});
     });
     return res.status(200).end();
   }catch{return res.status(503).end();}
