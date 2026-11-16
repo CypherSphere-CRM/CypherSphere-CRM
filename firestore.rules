@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function own(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function owner() {
+      return own('zXrKfpgUoiMq3ySzf8f6a0S25Kv2');
+    }
+    match /contacts/{path=**} {
+      allow read, write: if owner();
+    }
+    match /drivers/{uid}/{path=**} {
+      allow read: if own(uid);
+      allow write: if own(uid) && (owner() ||
+        request.time < get(/databases/$(database)/documents/billing/$(uid)).data.writeUntil);
+    }
+    match /previewDrivers/{uid}/{path=**} {
+      allow read: if own(uid);
+      allow write: if own(uid) && (owner() ||
+        request.time < get(/databases/$(database)/documents/previewBilling/$(uid)).data.writeUntil);
+    }
+    match /driverDirectory/{uid} {
+      allow get: if own(uid) || owner();
+      allow list: if owner();
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasAll(['uid','email','name','business','registeredAt'])
+        && request.resource.data.keys().hasOnly(['uid','email','name','business','registeredAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string && request.resource.data.name.size() <= 150
+        && request.resource.data.business is string && request.resource.data.business.size() <= 150
+        && request.resource.data.registeredAt is string && request.resource.data.registeredAt.size() <= 64;
+    }
+  }
+}
