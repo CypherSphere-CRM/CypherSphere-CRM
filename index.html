@@ -131,8 +131,8 @@ function startBilling(u){
     const until=new Date(result.trialEnds).toLocaleDateString(es?'es-US':'en-US');
     info.textContent=result.mode==='trial'?(es?'Prueba gratis hasta el ':'Free trial ends ')+until+(es?' · Después, $4.99 al mes si te suscribes.':' · Then $4.99/month if you subscribe.'):
       result.mode==='paid'?(es?'Suscripción activa':'Subscription active'):(es?'Solo lectura. Tus registros siguen disponibles.':'Read-only. You can still view your records.');
-    button.hidden=result.mode==='trial';
-    button.textContent=result.mode==='paid'?(es?'Administrar suscripción':'Manage subscription'):(es?'Suscribirme por $4.99/mes':'Subscribe for $4.99/month');
+    button.hidden=false;
+    button.textContent=result.mode==='trial'?(es?'Suscribirme ahora · $4.99 hoy y cada mes':'Subscribe now · $4.99 today and monthly'):result.mode==='paid'?(es?'Administrar suscripción':'Manage subscription'):(es?'Suscribirme por $4.99/mes':'Subscribe for $4.99/month');
     button.onclick=async()=>{button.disabled=true;try{const reply=await billing(result.mode==='paid'?'portal':'subscribe',u);if(user?.uid===u.uid)location.assign(reply.url);}catch(e){err(e);}finally{button.disabled=false;}};
     
     const end=Math.max(result.trialEnds,result.paidUntil);
