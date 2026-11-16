@@ -30,7 +30,7 @@ export default async function handler(req,res){
     const account=await getAuth().getUser(ref.id);
     await db.runTransaction(async tx=>{
       const doc=await tx.get(ref);
-      if(doc.data()?.customer!==customer) return;
+      if(doc.data()?.deleting || doc.data()?.customer!==customer) return;
       const {paidUntil}=await subscriptionAccess(stripe,customer,process.env.STRIPE_PRICE_ID);
       tx.update(ref,{writeUntil:Timestamp.fromMillis(Math.max(paidUntil,trialDeadline(account.metadata.creationTime)))});
     });
